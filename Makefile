@@ -24,6 +24,8 @@ FILES    := $$(find . -name '*.go' -type f | grep -vE 'vendor')
 
 TAG := $(shell git rev-parse --abbrev-ref HEAD | tr / -)-$(shell git rev-parse --short HEAD)
 
+GO_VERSION := 1.14.2
+
 .PHONY: $(MAKECMDGOALS)
 
 default: build
@@ -34,23 +36,23 @@ clean:
 	@rm -rf bin
 
 agent:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/mysql-agent cmd/mysql-agent/main.go
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/mysql-agent-tear-down cmd/mysql-agent-tear-down/main.go
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/mysql-agent-service-boot cmd/mysql-agent-service-boot/main.go
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/mysql-agent-service-boot-daemon cmd/mysql-agent-service-boot-daemon/main.go
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -mod=mod -o bin/mysql-agent cmd/mysql-agent/main.go
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -mod=mod -o bin/mysql-agent-tear-down cmd/mysql-agent-tear-down/main.go
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -mod=mod -o bin/mysql-agent-service-boot cmd/mysql-agent-service-boot/main.go
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -mod=mod -o bin/mysql-agent-service-boot-daemon cmd/mysql-agent-service-boot-daemon/main.go
 
 docker-agent:
 	mkdir -p bin/
 	docker run --rm -v `pwd`:/usr/src/myapp -w /usr/src/myapp gcc:8.1.0 gcc -o bin/supervise supervise/*.c
-	docker run --rm -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:1.11.0 make agent
+	docker run --rm -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:$(GO_VERSION) make agent
 	cp bin/* etc/docker-compose/agent/
 	cp bin/* etc/docker-compose/postgresql/
 
 checker:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/mysql-agent-checker cmd/mysql-agent-checker/main.go
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -mod=mod -o bin/mysql-agent-checker cmd/mysql-agent-checker/main.go
 
 docker-checker:
-	docker run --rm -e GOOS=`uname | tr 'A-Z' 'a-z'` -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:1.11.0 bash -c "make checker"
+	docker run --rm -e GOOS=`uname | tr 'A-Z' 'a-z'` -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:$(GO_VERSION) bash -c "make checker"
 
 checker-test:
 	@ docker exec mysql-node-1 mysql -h 127.0.0.1 -P 3306 -u mysql_user -pmysql_master_user_pwd -e 'select 1' >/dev/null || true
