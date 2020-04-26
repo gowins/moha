@@ -6,6 +6,7 @@ LDFLAGS += -X "$(TOOLS_PKG)/agent.Version=$(VERSION)"
 LDFLAGS += -X "$(TOOLS_PKG)/agent.BuildTS=$(shell date -u '+%Y-%m-%d %I:%M:%s')"
 LDFLAGS += -X "$(TOOLS_PKG)/agent.GitHash=$(shell git rev-parse HEAD)"
 
+GOVERSION := 1.14.2
 GO      := GO15VENDOREXPERIMENT="1" go
 GOBUILD := $(GO) build
 GOTEST  := $(GO) test
@@ -23,8 +24,6 @@ PACKAGES := $$(go list ./...| grep -vE 'vendor|cmd|moctl|checker')
 FILES    := $$(find . -name '*.go' -type f | grep -vE 'vendor')
 
 TAG := $(shell git rev-parse --abbrev-ref HEAD | tr / -)-$(shell git rev-parse --short HEAD)
-
-GO_VERSION := 1.14.2
 
 .PHONY: $(MAKECMDGOALS)
 
@@ -44,7 +43,7 @@ agent:
 docker-agent:
 	mkdir -p bin/
 	docker run --rm -v `pwd`:/usr/src/myapp -w /usr/src/myapp gcc:8.1.0 gcc -o bin/supervise supervise/*.c
-	docker run --rm -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:$(GO_VERSION) make agent
+	docker run --rm -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:$(GOVERSION) make agent
 	cp bin/* etc/docker-compose/agent/
 	cp bin/* etc/docker-compose/postgresql/
 
@@ -52,7 +51,7 @@ checker:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -mod=mod -o bin/mysql-agent-checker cmd/mysql-agent-checker/main.go
 
 docker-checker:
-	docker run --rm -e GOOS=`uname | tr 'A-Z' 'a-z'` -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:$(GO_VERSION) bash -c "make checker"
+	docker run --rm -e GOOS=`uname | tr 'A-Z' 'a-z'` -v `pwd`:/go/src/github.com/moiot/moha -w /go/src/github.com/moiot/moha golang:$(GOVERSION) bash -c "make checker"
 
 checker-test:
 	@ docker exec mysql-node-1 mysql -h 127.0.0.1 -P 3306 -u mysql_user -pmysql_master_user_pwd -e 'select 1' >/dev/null || true
@@ -122,7 +121,7 @@ tag:
 
 docker-image:
 	@ make docker-agent
-	@ docker build -t moiot/moha:$(TAG) -f ./etc/docker-compose/agent/Dockerfile.production ./etc/docker-compose/agent
+	@ docker build -t reg.weipaitang.com/micro/moha:$(TAG) -f ./etc/docker-compose/agent/Dockerfile.production ./etc/docker-compose/agent
 
 
 env-up:
